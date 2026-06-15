@@ -1,0 +1,7 @@
+# Enable PHP in HTML files
+AddHandler application/x-httpd-php .html .htm
+
+# Alternative (more reliable) method:
+<FilesMatch "\.(html|htm)$">
+    SetHandler application/x-httpd-php
+</FilesMatch>
