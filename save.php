@@ -1,39 +1,75 @@
 <?php
 // save.php
 session_start();
+header('Content-Type: application/json');
 
+require_once 'db.php';   // ← Shared connection
+
+// Helper function
+function getConfig($pdo, $key) {
+    $stmt = $pdo->prepare("SELECT config_value FROM nullforms_config WHERE config_key = ?");
+    $stmt->execute([$key]);
+    $value = $stmt->fetchColumn();
+    return $value !== false ? json_decode($value, true) : null;
+}
+
+// Load messages
+$success_message = getConfig($pdo, 'success_message') ?? 'Your NullF0rm has been inscribed.';
+$duplicate_error = getConfig($pdo, 'duplicate_error') ?? 'You have already inscribed with this X handle or wallet.';
+
+// ======================
+// FORM PROCESSING
+// ======================
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header("Location: index.php");
+    echo json_encode(['success' => false, 'message' => 'Invalid request method']);
     exit;
 }
 
 $xhandle = trim($_POST['xhandle'] ?? '');
-$wallet  = strtoupper(trim($_POST['wallet'] ?? ''));
+$wallet = strtoupper(trim($_POST['wallet'] ?? ''));
 
 if (empty($xhandle) || empty($wallet) || !str_starts_with($wallet, '0X') || strlen($wallet) !== 42) {
-    $_SESSION['form_errors'] = ["Invalid X handle or ETH address."];
-    header("Location: index.php");
+    echo json_encode(['success' => false, 'message' => 'Invalid X handle or ETH address.']);
     exit;
 }
 
-// Save data...
-$data = [
-    'timestamp' => date('Y-m-d H:i:s'),
-    'xhandle'   => $xhandle,
-    'wallet'    => $wallet,
-    'ip'        => $_SERVER['REMOTE_ADDR']
-];
+$ip = $_SERVER['REMOTE_ADDR'];
 
-$file = 'submissions.json';
-$existing = file_exists($file) ? json_decode(file_get_contents($file), true) : [];
-$existing[] = $data;
-file_put_contents($file, json_encode($existing, JSON_PRETTY_PRINT));
+// ======================
+// IP RATE LIMITING (max 2 submissions per IP per day)
+// ======================
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM nullforms_submissions 
+                       WHERE ip = ? AND DATE(timestamp) = CURDATE()");
+$stmt->execute([$ip]);
+if ($stmt->fetchColumn() >= 2) {
+    echo json_encode(['success' => false, 'message' => 'Too many attempts from this IP today.']);
+    exit;
+}
 
-// Mark user as submitted
+// ======================
+// DUPLICATE CHECK (using DB unique constraints + query)
+// ======================
+$stmt = $pdo->prepare("SELECT id FROM nullforms_submissions WHERE xhandle = ? OR wallet = ?");
+$stmt->execute([strtolower($xhandle), $wallet]);
+if ($stmt->fetch()) {
+    echo json_encode(['success' => false, 'message' => $duplicate_error]);
+    exit;
+}
+
+// ======================
+// SAVE SUBMISSION
+// ======================
+$stmt = $pdo->prepare("INSERT INTO nullforms_submissions (xhandle, wallet, ip) VALUES (?, ?, ?)");
+$stmt->execute([strtolower($xhandle), $wallet, $ip]);
+
+// Mark session
 $_SESSION['already_submitted'] = true;
 $_SESSION['handle'] = $xhandle;
 $_SESSION['wallet'] = $wallet;
 
-header("Location: index.php");
+echo json_encode([
+    'success' => true,
+    'message' => $success_message
+]);
+
 exit;
-?>

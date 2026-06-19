@@ -1,43 +1,29 @@
 <?php
 session_start();
 
+// Database connection (update credentials)
+require_once 'db.php';
+
+
+$tasks = getConfig($pdo, 'tasks') ?? [];
+$quote_message = getConfig($pdo, 'quote_message') ?? '';
+$success_title = getConfig($pdo, 'success_title') ?? '★ PROTOCOL COMPLETE ★';
+$success_message = getConfig($pdo, 'success_message') ?? 'Your NullF0rm has been inscribed.';
+$placeholders = getConfig($pdo, 'placeholders') ?? [];
+
 // Check if user has already submitted
 $alreadySubmitted = isset($_SESSION['already_submitted']) && $_SESSION['already_submitted'] === true;
-
 $submitted_handle = htmlspecialchars($_SESSION['handle'] ?? '', ENT_QUOTES);
 $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NullF0rms — WHITELIST PROTOCOL</title>
-
-    <!-- Favicon -->
+    <title>NullF0rms - WHITELIST PROTOCOL</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-    
-    <!-- Optional: Better favicon support -->
-    <link rel="apple-touch-icon" href="apple-touch-icon.png">
-    <link rel="icon" href="favicon.svg" type="image/svg+xml">
-    <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content="NullF0rms — WHITELIST PROTOCOL" />
-    <meta property="og:description"
-        content="Pure monochrome 1-bit entities. Complete the 4 tasks to claim your slot in the void." />
-    <meta property="og:image" content="https://yourdomain.com/images/preview.jpg" />
-    <meta property="og:url" content="https://yourdomain.com/index.php" />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="NullF0rms" />
-
-    <!-- Twitter / X Cards -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="NullF0rms — WHITELIST PROTOCOL" />
-    <meta name="twitter:description"
-        content="Pure monochrome 1-bit entities. Complete the 4 tasks to claim your slot in the void." />
-    <meta name="twitter:image" content="https://yourdomain.com/images/preview.jpg" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap"
         rel="stylesheet">
@@ -86,6 +72,30 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
             background: transparent;
             color: var(--ink);
         }
+
+        .quest-card {
+            border: 3px solid var(--ink);
+            background: #111;
+        }
+
+        .quest-card.done {
+            border-color: #0f0;
+            opacity: 0.85;
+        }
+
+        #progress {
+            height: 12px;
+            background: #222;
+            border: 2px solid var(--ink);
+            margin: 20px 0;
+        }
+
+        #hp {
+            height: 100%;
+            background: var(--ink);
+            width: 0%;
+            transition: width 0.6s ease;
+        }
     </style>
 </head>
 
@@ -96,7 +106,7 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
         <!-- ALREADY INSCRIBED SCREEN -->
         <div class="hero">
             <div class="container">
-                <h1>★ PROTOCOL COMPLETE ★</h1>
+                <h1><?= htmlspecialchars($success_title) ?></h1>
                 <p class="lead mt-4">You have already inscribed your NullF0rm.</p>
 
                 <div class="border border-3 border-white p-4 mt-5 mx-auto" style="max-width:520px;">
@@ -104,13 +114,11 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
                     <strong>Wallet:</strong> <?= $submitted_wallet ?>
                 </div>
 
-                <p class="mt-5">Welcome to the void.</p>
+                <p class="mt-5"><?= htmlspecialchars($success_message) ?></p>
                 <a href="index.php" class="btn btn-initialize mt-4">REFRESH STATUS</a>
             </div>
         </div>
-
     <?php else: ?>
-        <!-- NORMAL PAGE (Tasks + Form) -->
         <section class="hero">
             <div class="container">
                 <h1 class="mb-4">FORM YOUR<br>NULL.</h1>
@@ -122,13 +130,20 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
 
         <section id="tasks" class="py-5">
             <div class="container">
-                <!-- Your tasks and unit status here (keep as is) -->
+                <!-- Progress -->
+                <div class="text-center mb-4">
+                    <div id="progress">
+                        <div id="hp"></div>
+                    </div>
+                    <strong id="hpLabel">0/4 COMPLETE</strong>
+                </div>
+
                 <div id="questList" class="row g-4"></div>
 
                 <!-- Save Form -->
                 <div id="save" class="mt-5 p-5 border border-4 border-white bg-black">
                     <h3 class="text-center mb-4">SAVE TO CHAIN</h3>
-                    <form action="save.php" method="POST">
+                    <form id="saveForm" action="save.php" method="POST">
                         <div class="row g-4">
                             <div class="col-md-6">
                                 <label class="form-label">X USERNAME</label>
@@ -148,56 +163,33 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
     <?php endif; ?>
 
     <footer class="text-center py-5 border-top border-white">
-        <b>NullF0rms</b> — RAW 1-BIT MONOCHROME ENTITIES • 2026
+        <b>NullF0rms</b> - RAW 1-BIT MONOCHROME ENTITIES • 2026
     </footer>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="winModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-black text-white border border-4 border-white">
+                <div class="modal-body text-center p-5">
+                    <h3><?= htmlspecialchars($success_title) ?></h3>
+                    <div id="winGrid" class="d-flex flex-wrap justify-content-center gap-3 my-4"></div>
+                    <p><?= htmlspecialchars($success_message) ?></p>
+                    <div id="winWallet" class="border border-white p-3 mt-4 text-break"></div>
+                    <button class="btn btn-light mt-4" data-bs-dismiss="modal">RETURN TO SYSTEM</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // === CONFIG ===
         const CONFIG = {
-            tasks: [
-                {
-                    title: "FOLLOW ON X",
-                    desc: "Follow the official NullF0rms account.",
-                    url: "https://x.com/NullF0rms",           // ← Update with real handle
-                    btn: "FOLLOW"
-                },
-                {
-                    title: "LIKE + RETWEET",
-                    desc: "Like and repost the launch announcement.",
-                    url: "https://x.com/NullF0rms/status/YOUR_POST_ID",
-                    btn: "ENGAGE"
-                },
-                {
-                    title: "COMMENT ON POST",
-                    desc: "Leave a comment under the launch post.",
-                    url: "https://x.com/NullF0rms/status/YOUR_POST_ID",
-                    btn: "COMMENT"
-                },
-                {
-                    title: "QUOTE RETWEET",
-                    desc: "Quote the announcement post.",
-                    url: "https://x.com/intent/tweet?text=" + encodeURIComponent(
-                        "Just joined the @NullF0rms whitelist 🔥\n\n" +
-                        "Raw 1-bit monochrome entities dropping soon.\n\n" +
-                        "Don't miss this one.\n" +
-                        "Join now at www.NullF0rms.xyz"
-                    ),
-                    btn: "QUOTE"
-                }
-            ]
+            tasks: <?= json_encode($tasks) ?>,
+            quoteMessage: <?= json_encode($quote_message) ?>,
+            placeholders: <?= json_encode($placeholders) ?>
         };
 
-        const PLACEHOLDERS = [
-            "https://picsum.photos/id/1015/160/160",
-            "https://picsum.photos/id/133/160/160",
-            "https://picsum.photos/id/160/160/160",
-            "https://picsum.photos/id/201/160/160"
-        ];
-
-        let state = {
-            done: Array(4).fill(false)
-        };
+        let state = { done: Array(4).fill(false) };
 
         // Populate Tasks
         const questList = document.getElementById('questList');
@@ -206,7 +198,8 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
             div.className = 'col-md-6';
             div.innerHTML = `
                 <div class="quest-card p-4 h-100">
-                    <img src="${PLACEHOLDERS[i]}" class="mb-3" style="height:85px;object-fit:contain;">
+                    <img src="${CONFIG.placeholders[i] || 'https://picsum.photos/id/201/160/160'}" 
+                         class="mb-3" style="height:85px;object-fit:contain;">
                     <h5>${task.title}</h5>
                     <p>${task.desc}</p>
                     <button class="btn btn-initialize w-100 mt-3" data-i="${i}">${task.btn}</button>
@@ -238,74 +231,55 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
             const completed = state.done.filter(Boolean).length;
             document.getElementById('hp').style.width = (completed * 25) + '%';
             document.getElementById('hpLabel').textContent = `${completed}/4`;
-
-            if (completed === 4) {
-                document.getElementById('save').classList.remove('locked');
-                document.getElementById('lockmsg').style.display = 'none';
-            }
         }
 
-        // Save Form
-        document.getElementById('saveBtn').addEventListener('click', async () => {
-            const wallet = document.getElementById('wallet').value.trim();
-            let handle = document.getElementById('xhandle').value.trim();
-            const err = document.getElementById('err');
+        // Form Submission - Improved
+        document.getElementById('saveForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-            if (!handle) {
-                err.textContent = "ENTER X HANDLE";
-                err.style.display = 'block';
-                return;
-            }
+            // Remove old error if exists
+            const oldErr = document.getElementById('formError');
+            if (oldErr) oldErr.remove();
+
+            const formData = new FormData(e.target);
+            const wallet = formData.get('wallet').trim();
+
             if (!wallet.startsWith('0x') || wallet.length !== 42) {
-                err.textContent = "INVALID ETH ADDRESS";
-                err.style.display = 'block';
+                showError("INVALID ETH ADDRESS");
                 return;
             }
-
-            err.style.display = 'none';
-            if (!handle.startsWith('@')) handle = '@' + handle;
-
-            // Send to PHP
-            const formData = new FormData();
-            formData.append('xhandle', handle);
-            formData.append('wallet', wallet);
 
             try {
                 const res = await fetch('save.php', {
                     method: 'POST',
                     body: formData
                 });
+
                 const data = await res.json();
 
                 if (data.success) {
-                    document.getElementById('winWallet').innerHTML = `${handle}<br>${wallet}`;
+                    document.getElementById('winWallet').innerHTML =
+                        `${formData.get('xhandle')}<br>${wallet}`;
                     new bootstrap.Modal(document.getElementById('winModal')).show();
+                    setTimeout(() => location.reload(), 5000);
                 } else {
-                    alert("Error: " + data.message);
+                    showError(data.message || 'Submission failed');
                 }
-            } catch (e) {
-                alert("Connection error. Please try again.");
+            } catch (err) {
+                showError("Connection error. Please try again.");
             }
         });
 
+        function showError(msg) {
+            const errDiv = document.createElement('div');
+            errDiv.id = 'formError';
+            errDiv.className = 'alert alert-danger mt-3 text-center';
+            errDiv.textContent = msg;
+            document.getElementById('save').appendChild(errDiv);
+        }
         // Init
         refreshUI();
     </script>
-
-    <!-- WIN MODAL -->
-    <div class="modal fade" id="winModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content bg-black text-white border border-4 border-white">
-                <div class="modal-body text-center p-5">
-                    <h3>★ PROTOCOL COMPLETE ★</h3>
-                    <div id="winGrid" class="d-flex flex-wrap justify-content-center gap-3 my-4"></div>
-                    <p>Your NullF0rm has been inscribed.</p>
-                    <div id="winWallet" class="border border-white p-3 mt-4 text-break"></div>
-                    <button class="btn btn-light mt-4" data-bs-dismiss="modal">RETURN TO SYSTEM</button>
-                </div>
-            </div>
-        </div>
-    </div>
 </body>
 
 </html>
