@@ -18,15 +18,49 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NullF0rms - WHITELIST PROTOCOL</title>
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap"
-        rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon" />
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png" />
+
+    <!-- Open Graph Meta Tags (Good for Facebook, Discord, etc.) -->
+    <meta property="og:title" content="NullF0rms - WHITELIST PROTOCOL" />
+    <meta
+      property="og:description"
+      content="Pure monochrome 1-bit entities. Complete the 4 tasks to claim your slot in the void."
+    />
+    <meta
+      property="og:image"
+      content="https://nullforms.xyz/images/preview.webp"
+    />
+    <meta property="og:url" content="https://nullforms.xyz/index.php" />
+    <meta property="og:type" content="website" />
+
+    <!-- Twitter / X Cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="NullF0rms - WHITELIST PROTOCOL" />
+    <meta
+      name="twitter:description"
+      content="Pure monochrome 1-bit entities. Complete the 4 tasks to claim your slot in the void."
+    />
+    <meta
+      name="twitter:image"
+      content="https://nullforms.xyz/images/preview.webp"
+    />
+
+    <!-- CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap"
+      rel="stylesheet"
+    />
     <style>
         :root {
             --bg: #000;
