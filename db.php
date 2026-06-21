@@ -20,7 +20,6 @@ try {
 // Make $pdo available globally
 global $pdo;
 
-// db.php - Add / Replace this function
 function getConfig($pdo, $key, $default = null) {
     $stmt = $pdo->prepare("SELECT config_value FROM nullforms_config WHERE config_key = ?");
     $stmt->execute([$key]);
@@ -39,4 +38,14 @@ function getConfig($pdo, $key, $default = null) {
     }
 
     return $decoded;
+}
+
+// Helper function to shorten wallet address
+function shortenWallet($wallet) {
+    if (empty($wallet) || strlen($wallet) < 12) {
+        return htmlspecialchars($wallet);
+    }
+    $start = substr($wallet, 0, 6);   // First 6 characters (including 0x)
+    $end   = substr($wallet, -6);     // Last 6 characters
+    return htmlspecialchars($start . '...' . $end);
 }

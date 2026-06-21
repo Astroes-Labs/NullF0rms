@@ -1,14 +1,13 @@
 <?php
 session_start();
 
-// Database connection (update credentials)
 require_once 'db.php';
 
-
+// Fetch config from DB
 $tasks = getConfig($pdo, 'tasks') ?? [];
 $quote_message = getConfig($pdo, 'quote_message') ?? '';
-$success_title = getConfig($pdo, 'success_title') ?? '★ PROTOCOL COMPLETE ★';
-$success_message = getConfig($pdo, 'success_message') ?? 'Your NullF0rm has been inscribed.';
+$success_title = getConfig($pdo, 'success_title', '★ PROTOCOL COMPLETE ★');
+$success_message = getConfig($pdo, 'success_message', 'Your NullF0rm has been inscribed.');
 $placeholders = getConfig($pdo, 'placeholders') ?? [];
 
 // Check if user has already submitted
@@ -18,61 +17,47 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
 ?>
 <!DOCTYPE html>
 <html lang="en">
- <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NullF0rms - WHITELIST PROTOCOL</title>
 
     <!-- Favicon -->
-    <link rel="icon" href="images/favicon.ico" type="image/x-icon" />
-    <link rel="apple-touch-icon" href="images/apple-touch-icon.png" />
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
 
-    <!-- Open Graph Meta Tags (Good for Facebook, Discord, etc.) -->
+    <!-- Open Graph + Twitter -->
     <meta property="og:title" content="NullF0rms - WHITELIST PROTOCOL" />
-    <meta
-      property="og:description"
-      content="Pure monochrome 1-bit entities. Complete the 4 tasks to claim your slot in the void."
-    />
-    <meta
-      property="og:image"
-      content="https://nullforms.xyz/images/preview.webp"
-    />
+    <meta property="og:description"
+        content="Pure monochrome 1-bit entities. Complete the 4 tasks to claim your slot in the void." />
+    <meta property="og:image" content="https://nullforms.xyz/images/preview.webp" />
     <meta property="og:url" content="https://nullforms.xyz/index.php" />
     <meta property="og:type" content="website" />
 
-    <!-- Twitter / X Cards -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="NullF0rms - WHITELIST PROTOCOL" />
-    <meta
-      name="twitter:description"
-      content="Pure monochrome 1-bit entities. Complete the 4 tasks to claim your slot in the void."
-    />
-    <meta
-      name="twitter:image"
-      content="https://nullforms.xyz/images/preview.webp"
-    />
+    <meta name="twitter:description"
+        content="Pure monochrome 1-bit entities. Complete the 4 tasks to claim your slot in the void." />
+    <meta name="twitter:image" content="https://nullforms.xyz/images/preview.webp" />
 
     <!-- CSS -->
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&amp;family=VT323&amp;display=swap"
+        rel="stylesheet">
+
     <style>
         :root {
             --bg: #000;
             --ink: #fff;
-            --light: #ccc;
         }
 
         body {
             background: var(--bg);
             color: var(--ink);
             font-family: 'VT323', monospace;
-            font-size: 20px;
+            font-size: 18px;
+            line-height: 1.4;
         }
 
         .crt {
@@ -90,37 +75,41 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
             justify-content: center;
             text-align: center;
             border-bottom: 8px solid var(--ink);
+            padding: 20px 10px;
         }
 
         h1 {
             font-family: 'Press Start 2P', system-ui;
-            font-size: clamp(48px, 10vw, 90px);
-            line-height: 1;
+            font-size: clamp(32px, 8vw, 72px);
+            line-height: 1.1;
         }
 
         .btn-initialize {
             font-family: 'Press Start 2P', system-ui;
-            font-size: 18px;
-            padding: 20px 50px;
+            font-size: clamp(16px, 4vw, 20px);
+            padding: 18px 40px;
             border: 5px solid var(--ink);
             background: transparent;
             color: var(--ink);
+            width: 100%;
+            max-width: 380px;
         }
 
         .quest-card {
             border: 3px solid var(--ink);
             background: #111;
+            height: 100%;
         }
 
         .quest-card.done {
             border-color: #0f0;
-            opacity: 0.85;
+            opacity: 0.9;
         }
 
         #progress {
-            height: 12px;
+            height: 14px;
             background: #222;
-            border: 2px solid var(--ink);
+            border: 3px solid var(--ink);
             margin: 20px 0;
         }
 
@@ -129,6 +118,42 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
             background: var(--ink);
             width: 0%;
             transition: width 0.6s ease;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            body {
+                font-size: 17px;
+            }
+
+            .hero {
+                min-height: 85vh;
+                padding: 15px 8px;
+            }
+
+            .container {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+
+            .btn-initialize {
+                padding: 16px 30px;
+            }
+
+            .quest-card {
+                margin-bottom: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: clamp(28px, 9vw, 48px);
+            }
+
+            .btn-initialize {
+                font-size: 17px;
+                padding: 14px 25px;
+            }
         }
     </style>
 </head>
@@ -144,11 +169,22 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
                 <p class="lead mt-4">You have already inscribed your NullF0rm.</p>
 
                 <div class="border border-3 border-white p-4 mt-5 mx-auto" style="max-width:520px;">
-                    <strong>X Handle:</strong> <?= $submitted_handle ?><br><br>
-                    <strong>Wallet:</strong> <?= $submitted_wallet ?>
+                    <div class="mb-3">
+                        <strong>X Handle:</strong><br>
+                        <span style="font-size: 1.1rem;"><?= $submitted_handle ?></span>
+                    </div>
+                    <div>
+                        <strong>Wallet:</strong><br>
+                        <span class="font-monospace" style="font-size: 1rem; color: #0f0; word-break: break-all;">
+                            <?= shortenWallet($submitted_wallet) ?>
+                        </span>
+                    </div>
                 </div>
 
-                <p class="mt-5"><?= htmlspecialchars($success_message) ?></p>
+                <div class="mt-5 lead" style="line-height: 1.6;">
+                    <?= nl2br(htmlspecialchars($success_message)) ?>
+                </div>
+
                 <a href="index.php" class="btn btn-initialize mt-4">REFRESH STATUS</a>
             </div>
         </div>
@@ -175,15 +211,15 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
                 <div id="questList" class="row g-4"></div>
 
                 <!-- Save Form -->
-                <div id="save" class="mt-5 p-5 border border-4 border-white bg-black">
+                <div id="save" class="mt-5 p-4 p-md-5 border border-4 border-white bg-black">
                     <h3 class="text-center mb-4">SAVE TO CHAIN</h3>
                     <form id="saveForm" action="save.php" method="POST">
                         <div class="row g-4">
-                            <div class="col-md-6">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label">X USERNAME</label>
                                 <input type="text" class="form-control" name="xhandle" placeholder="@yourhandle" required>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label">ETH WALLET ADDRESS</label>
                                 <input type="text" class="form-control" name="wallet" placeholder="0x..." maxlength="42"
                                     required>
@@ -204,10 +240,15 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
     <div class="modal fade" id="winModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-black text-white border border-4 border-white">
-                <div class="modal-body text-center p-5">
+                <div class="modal-body text-center p-4 p-md-5">
                     <h3><?= htmlspecialchars($success_title) ?></h3>
                     <div id="winGrid" class="d-flex flex-wrap justify-content-center gap-3 my-4"></div>
-                    <p><?= htmlspecialchars($success_message) ?></p>
+
+                    <div
+                        style="white-space: pre-wrap; line-height: 1.6; text-align: left; margin: 20px auto; max-width: 420px;">
+                        <?= nl2br(htmlspecialchars($success_message)) ?>
+                    </div>
+
                     <div id="winWallet" class="border border-white p-3 mt-4 text-break"></div>
                     <button class="btn btn-light mt-4" data-bs-dismiss="modal">RETURN TO SYSTEM</button>
                 </div>
@@ -219,7 +260,6 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
     <script>
         const CONFIG = {
             tasks: <?= json_encode($tasks) ?>,
-            quoteMessage: <?= json_encode($quote_message) ?>,
             placeholders: <?= json_encode($placeholders) ?>
         };
 
@@ -229,11 +269,11 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
         const questList = document.getElementById('questList');
         CONFIG.tasks.forEach((task, i) => {
             const div = document.createElement('div');
-            div.className = 'col-md-6';
+            div.className = 'col-12 col-md-6';
             div.innerHTML = `
                 <div class="quest-card p-4 h-100">
                     <img src="${CONFIG.placeholders[i] || 'https://picsum.photos/id/201/160/160'}" 
-                         class="mb-3" style="height:85px;object-fit:contain;">
+                         class="mb-3" style="height:85px; width:100%; object-fit:contain;">
                     <h5>${task.title}</h5>
                     <p>${task.desc}</p>
                     <button class="btn btn-initialize w-100 mt-3" data-i="${i}">${task.btn}</button>
@@ -242,7 +282,7 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
             questList.appendChild(div);
         });
 
-        // Task Handler
+        // Task Handler (unchanged)
         questList.addEventListener('click', e => {
             const btn = e.target.closest('button[data-i]');
             if (!btn) return;
@@ -267,11 +307,9 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
             document.getElementById('hpLabel').textContent = `${completed}/4`;
         }
 
-        // Form Submission - Improved
+        // Form Submission
         document.getElementById('saveForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-
-            // Remove old error if exists
             const oldErr = document.getElementById('formError');
             if (oldErr) oldErr.remove();
 
@@ -284,18 +322,12 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
             }
 
             try {
-                const res = await fetch('save.php', {
-                    method: 'POST',
-                    body: formData
-                });
-
+                const res = await fetch('save.php', { method: 'POST', body: formData });
                 const data = await res.json();
 
                 if (data.success) {
-                    document.getElementById('winWallet').innerHTML =
-                        `${formData.get('xhandle')}<br>${wallet}`;
+                    document.getElementById('winWallet').innerHTML = `${formData.get('xhandle')}<br>${wallet}`;
                     new bootstrap.Modal(document.getElementById('winModal')).show();
-                    setTimeout(() => location.reload(), 5000);
                 } else {
                     showError(data.message || 'Submission failed');
                 }
@@ -311,6 +343,7 @@ $submitted_wallet = htmlspecialchars($_SESSION['wallet'] ?? '', ENT_QUOTES);
             errDiv.textContent = msg;
             document.getElementById('save').appendChild(errDiv);
         }
+
         // Init
         refreshUI();
     </script>
