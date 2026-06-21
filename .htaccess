@@ -5,3 +5,16 @@ AddHandler application/x-httpd-php .html .htm
 <FilesMatch "\.(html|htm)$">
     SetHandler application/x-httpd-php
 </FilesMatch>
+
+# .htaccess - Clean URLs
+Options +FollowSymLinks
+RewriteEngine On
+
+# Remove index.php from URL
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [L]
+
+# Redirect index.php to root (clean URL)
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /index\.php
+RewriteRule ^index\.php$ / [R=301,L]
